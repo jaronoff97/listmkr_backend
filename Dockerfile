@@ -1,8 +1,10 @@
 FROM ubuntu:14.04
 
-ENV SWIFT_BRANCH development
+# https://swift.org/builds/swift-3.0.2-release/ubuntu1404/swift-3.0.2-RELEASE/swift-3.0.2-RELEASE-ubuntu14.04.tar.gz
+
+ENV SWIFT_BRANCH swift-3.0.2-release
 ARG SWIFT_VERSION
-ENV SWIFT_VERSION DEVELOPMENT-SNAPSHOT-2016-06-20-a
+ENV SWIFT_VERSION 3.0.2-RELEASE
 ENV SWIFT_PLATFORM ubuntu14.04
 
 # Install related packages
