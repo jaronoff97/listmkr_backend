@@ -245,6 +245,10 @@ drop.get("localization", String.self) { request, lang in
     ])
 }
 
+drop.any("hello") { request in
+    return "Hello World!"
+}
+
 /**
     Middleware is a great place to filter 
     and modifying incoming requests and outgoing responses. 
