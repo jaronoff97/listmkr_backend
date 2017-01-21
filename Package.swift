@@ -3,8 +3,7 @@ import PackageDescription
 let package = Package(
     name: "VaporApp",
     dependencies: [
-        .Package(url: "https://github.com/qutheory/vapor.git", majorVersion: 0, minor: 13),
-        .Package(url: "https://github.com/qutheory/vapor-mustache.git", majorVersion: 0, minor: 9)
+        .Package(url: "https://github.com/vapor/vapor.git", majorVersion: 1, minor: 3)
     ],
     exclude: [
         "Config",

@@ -1,34 +1,5 @@
 import Vapor
-
-
-/**
-    Adding a provider allows it to boot
-    and initialize itself as a dependency.
-
-    Includes are relative to the Views (`Resources/Views`)
-    directory by default.
-*/
-
-/**
-    Xcode defaults to a working directory in
-    a temporary build folder. 
-    
-    In order for Vapor to access Resources and
-    Configuration files, the working directory
-    must be the root directory of your project.
- 
-    This can also be achieved by passing
-    --workDir=$(SRCROOT) in the Xcode arguments
-    or setting the root directory manually in:
-    Edit Scheme > Options > [ ] Use custom working directory
-*/
-let workDir: String?
-#if Xcode
-    let parent = #file.characters.split(separator: "/").map(String.init).dropLast().joined(separator: "/")
-    workDir = "/\(parent)/.."
-#else
-    workDir = nil
-#endif
+import HTTP
 
 /**
     Droplets are service containers that make accessing
@@ -37,7 +8,7 @@ let workDir: String?
     or `drop.client()` to create a client for
     request data from other servers.
 */
-let drop = Droplet(workDir: workDir, providers: [])
+let drop = Droplet()
 
 /**
     Vapor configuration files are located
@@ -50,21 +21,20 @@ let drop = Droplet(workDir: workDir, providers: [])
 
     Read the docs to learn more
 */
-let key = drop.config["app", "key"].string ?? ""
-drop.console.output("Hash key is: \(key)", style: .info)
+let _ = drop.config["app", "key"]?.string ?? ""
 
 /**
-    This first route will return the index.html
+    This first route will return the welcome.html
     view to any request to the root directory of the website.
 
     Views referenced with `app.view` are by default assumed
-    to live in <workDir>/Resources/Views/ 
+    to live in <workDir>/Resources/Views/
 
     You can override the working directory by passing
     --workDir to the application upon execution.
 */
 drop.get("/") { request in
-    return try drop.view("index.html")
+    return try drop.view.make("welcome.html")
 }
 
 /**
@@ -72,7 +42,7 @@ drop.get("/") { request in
     any JSON data type (String, Int, Dict, etc)
     in JSON() and returning it.
 
-    Types can be made convertible to JSON by 
+    Types can be made convertible to JSON by
     conforming to JsonRepresentable. The User
     model included in this example demonstrates this.
 
@@ -81,13 +51,13 @@ drop.get("/") { request in
     were a native JSON data type.
 */
 drop.get("json") { request in
-    return JSON([
+    return try JSON(node: [
         "number": 123,
         "string": "test",
-        "array": JSON([
+        "array": try JSON(node: [
             0, 1, 2, 3
         ]),
-        "dict": JSON([
+        "dict": try JSON(node: [
             "name": "Vapor",
             "lang": "Swift"
         ])
@@ -116,14 +86,15 @@ drop.get("json") { request in
     - Form URL-Encoded: request.data.formEncoded
     - MultiPart: request.data.multipart
 */
-drop.any("data") { request in
-    return JSON([
-        "name": request.data["users", 0, "name"].string ?? "no name"
+drop.get("data", Int.self) { request, int in
+    return try JSON(node: [
+        "int": int,
+        "name": request.data["name"]?.string ?? "no name"
     ])
 }
 
 /**
-    Here's an example of using type-safe routing to ensure 
+    Here's an example of using type-safe routing to ensure
     only requests to "posts/<some-integer>" will be handled.
 
     String is the most general and will match any request
@@ -149,9 +120,15 @@ drop.get("posts", Int.self) { request, postId in
 let users = UserController(droplet: drop)
 drop.resource("users", users)
 
+drop.get("leaf") { request in
+    return try drop.view.make("template", [
+        "greeting": "Hello, world!"
+    ])
+}
+
 /**
     A custom validator definining what
-    constitutes a valid name. Here it is 
+    constitutes a valid name. Here it is
     defined as an alphanumeric string that
     is between 5 and 20 characters.
 */
@@ -185,17 +162,18 @@ class Employee {
     to be returned as Json
 */
 extension Employee: JSONRepresentable {
-    func makeJSON() -> JSON {
-        return JSON([
+    func makeJSON() throws -> JSON {
+        return try JSON(node: [
             "email": email.value,
             "name": name.value
         ])
     }
 }
 
-drop.any("validation") { request in
-    return try Employee(request: request)
-}
+// Temporarily unavailable
+//drop.any("validation") { request in
+//    return try Employee(request: request)
+//}
 
 /**
     This simple plaintext response is useful
@@ -212,14 +190,14 @@ drop.get("plaintext") { request in
     enabled–the data will persist with each request.
 */
 drop.get("session") { request in
-    let json = JSON([
-        "session.data": "\(request.session)",
+    let json = try JSON(node: [
+        "session.data": "\(request.session().data["name"])",
         "request.cookies": "\(request.cookies)",
         "instructions": "Refresh to see cookie and session get set."
     ])
     var response = try Response(status: .ok, json: json)
 
-    request.session?["name"] = "Vapor"
+    try request.session().data["name"] = "Vapor"
     response.cookies["test"] = "123"
 
     return response
@@ -239,27 +217,26 @@ drop.get("session") { request in
     the language code.
 */
 drop.get("localization", String.self) { request, lang in
-    return JSON([
+    return try JSON(node: [
         "title": drop.localization[lang, "welcome", "title"],
         "body": drop.localization[lang, "welcome", "body"]
     ])
 }
 
 /**
-    Middleware is a great place to filter 
-    and modifying incoming requests and outgoing responses. 
+    Middleware is a great place to filter
+    and modifying incoming requests and outgoing responses.
 
     Check out the middleware in App/Middleware.
 
     You can also add middleware to a single route by
-    calling the routes inside of `app.middleware(MiddlewareType) { 
+    calling the routes inside of `app.middleware(MiddlewareType) {
         app.get() { ... }
     }`
 */
-drop.globalMiddleware.append(SampleMiddleware())
+drop.middleware.append(SampleMiddleware())
 
-let port = drop.config["app", "port"].int ?? 80
+let port = drop.config["app", "port"]?.int ?? 80
 
 // Print what link to visit for default port
-print("Visit http://localhost:\(port)")
-drop.serve()
+drop.run()
