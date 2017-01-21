@@ -43,12 +43,12 @@ RUN chown -R ${USERNAME}:${USERNAME} /vapor
 # e.g. --build-arg REPO=vapor-example --build-arg REVISION=b389e2a
 # REVISION can be a tag or branch
 ARG REPO_CLONE_URL
-ENV REPO_CLONE_URL ${REPO_CLONE_URL}
+ENV REPO_CLONE_URL https://github.com/jaronoff97/listmkr_backend.git
 
 RUN echo ${REPO_CLONE_URL}
 USER ${USERNAME}
 RUN git clone ${REPO_CLONE_URL}
-WORKDIR /vapor/swift-on-ecs/demo/example
+WORKDIR /vapor/listmkr_backend
 RUN swift build
 
 EXPOSE 8080
